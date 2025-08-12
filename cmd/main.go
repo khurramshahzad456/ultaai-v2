@@ -2,19 +2,22 @@ package main
 
 import (
 	"log"
-
-	"ultahost-ai-assistant/internal/config"
-	"ultahost-ai-assistant/internal/server"
+	"ultahost-ai-gateway/internal/config"
+	"ultahost-ai-gateway/internal/server"
 )
 
 func main() {
 	// Load environment variables
-	if err := config.Load(); err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+	config.LoadConfig()
 
+	// Initialize server
 	s := server.NewServer()
+
+	// Register all routes
+	server.RegisterRoutes(s.Engine)
+
+	log.Printf(" Server starting on port %s...\n", config.AppConfig.Port)
 	if err := s.Start(); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		log.Fatalf(" Server failed to start: %v", err)
 	}
 }

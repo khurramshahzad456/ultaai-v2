@@ -3,49 +3,34 @@ package config
 import (
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
-type AppConfig struct {
-	OpenAIKey string
-	Port      int
+type Config struct {
+	Port        string
+	NestAPIBase string
+	OpenAIKey   string
 }
 
-var appConfig AppConfig
+var AppConfig *Config
 
-func Load() error {
-
-	//// Channge when finlaise with team like .env, need to implement error handling or placeholder value will change
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("err loading: %v", err)
+func LoadConfig() {
+	// Load .env file if present
+	if err := godotenv.Load(); err != nil {
+		log.Println(" .env file not found, relying on environment variables")
 	}
 
-	appConfig.OpenAIKey = os.Getenv("OPENAI_API_KEY")
-	//fmt.Println("appConfig.OpenAIKey : ", appConfig.OpenAIKey)
-	portStr := os.Getenv("PORT")
-	if portStr == "" {
-		log.Printf("Invalid port value, defaulting to 8081")
-
-		portStr = "8081"
-
+	AppConfig = &Config{
+		Port:        getEnv("PORT", "8089"),
+		NestAPIBase: getEnv("NEST_API_URL", "https://api.ultahost.dev"),
+		OpenAIKey:   getEnv("OPENAI_KEY", ""),
 	}
-	port, err := strconv.Atoi(portStr)
-	if err != nil {
-		log.Printf("Invalid port value, defaulting to 8081")
-		port = 8081
-	}
-	appConfig.Port = port
-
-	if appConfig.OpenAIKey == "" {
-		log.Println("Warning: OPENAI_API_KEY is not set.")
-	}
-
-	return nil
 }
 
-func Get() AppConfig {
-	return appConfig
+func getEnv(key, defaultVal string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return defaultVal
 }
