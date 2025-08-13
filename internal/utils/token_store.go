@@ -38,6 +38,7 @@ func ConsumeInstallToken(token string) (TokenData, bool) {
 		return TokenData{}, false
 	}
 
+	// Delete token so it can't be reused
 	delete(tokenStore, token)
 	return data, true
 }

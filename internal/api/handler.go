@@ -25,7 +25,9 @@ func HandleChat(c *gin.Context) {
 	category, err := ai.ClassifyPromptCategory(&models.CategoryRequest{
 		Query: req.Message,
 		Categories: []string{
+			"billing",
 			"vps",
+			"domain",
 			"products",
 			"support",
 			"server_metrics",
@@ -44,6 +46,22 @@ func HandleChat(c *gin.Context) {
 	switch category {
 	case "vps", "vm_command", "server_metrics", "wordpress":
 		resp, err := agents.HandleVPS(req, agents.VPSFunctionList)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"response": resp})
+
+	case "billing":
+		resp, err := agents.HandleBilling(req)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"response": resp})
+
+	case "domain":
+		resp, err := agents.HandleDomain(req)
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 			return
