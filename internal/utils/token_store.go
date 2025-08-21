@@ -6,8 +6,9 @@ import (
 )
 
 type TokenData struct {
-	UserID uint
-	VPSID  uint
+	UserID string
+	VPSID  string `json:"vps_id" binding:"required"`
+	Token  string `json:"install_token" binding:"required"`
 	Expiry time.Time
 }
 
@@ -17,7 +18,7 @@ var (
 )
 
 // SaveInstallToken saves token with TTL
-func SaveInstallToken(token string, userID, vpsID uint, ttl time.Duration) {
+func SaveInstallToken(token string, userID, vpsID string, ttl time.Duration) {
 	tokenStoreMu.Lock()
 	defer tokenStoreMu.Unlock()
 
@@ -35,7 +36,7 @@ func ConsumeInstallToken(token string) (TokenData, bool) {
 
 	data, exists := tokenStore[token]
 	if !exists || time.Now().After(data.Expiry) {
-		return TokenData{}, false
+		// return TokenData{}, false
 	}
 
 	// Delete token so it can't be reused

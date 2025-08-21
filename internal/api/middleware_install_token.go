@@ -11,9 +11,12 @@ import (
 // InstallTokenMiddleware checks install token validity
 func InstallTokenMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body struct {
-			InstallToken string `json:"install_token" binding:"required"`
-		}
+		// var body struct {
+		// 	InstallToken string `json:"install_token" binding:"required"`
+		// 	VpsId        string `json:"vps_id" binding:"required"`
+		// }
+
+		var body utils.TokenData
 
 		// Parse JSON body first
 		if err := c.ShouldBindJSON(&body); err != nil {
@@ -23,15 +26,16 @@ func InstallTokenMiddleware() gin.HandlerFunc {
 		}
 
 		// Verify & consume token
-		tokenData, ok := utils.ConsumeInstallToken(body.InstallToken)
+		_, ok := utils.ConsumeInstallToken(body.Token)
 		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
 
-		// Store token data for handler use
-		c.Set("tokenData", tokenData)
+		// fmt.Println("----vpsid: ", tokenData.VPSID)
+		// Store data for handler use
+		c.Set("tokenData", body)
 
 		// Let the request proceed
 		c.Next()

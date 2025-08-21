@@ -19,39 +19,6 @@ import (
 // In production, generate securely and share via secure channel
 var encryptionKey = []byte("0123456789abcdef0123456789abcdef")
 
-// Load your CA cert and key from files (PEM format)
-// func loadCA(keyPathth, certPath string) (*x509.Certificate, *rsa.PrivateKey, error) {
-// 	caCertPEM, err := os.ReadFile(certPath + "/ca.crt")
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-// 	caKeyPEM, err := os.ReadFile(keyPathth + "/ca.key")
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-
-// 	fmt.Println("caCertPEM: ", caCertPEM)
-// 	block, _ := pem.Decode(caCertPEM)
-// 	if block == nil {
-// 		return nil, nil, fmt.Errorf("failed to parse CA cert PEM")
-// 	}
-// 	caCert, err := x509.ParseCertificate(block.Bytes)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-
-// 	block, _ = pem.Decode(caKeyPEM)
-// 	if block == nil {
-// 		return nil, nil, fmt.Errorf("failed to parse CA key PEM")
-// 	}
-// 	caKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-// 	if err != nil {
-// 		return nil, nil, err
-// 	}
-
-// 	return caCert, caKey, nil
-// }
-
 func loadCA(keyPathth, certPath string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	caCertPEM, err := os.ReadFile(certPath + "/ca.crt")
 	if err != nil {
@@ -103,7 +70,6 @@ func generateClientCert(caCert *x509.Certificate, caKey *rsa.PrivateKey, commonN
 		return nil, nil, err
 	}
 
-	// Client cert template
 	clientCertTmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(time.Now().UnixNano()),
 		Subject: pkix.Name{
@@ -117,8 +83,6 @@ func generateClientCert(caCert *x509.Certificate, caKey *rsa.PrivateKey, commonN
 		BasicConstraintsValid: true,
 	}
 
-	// fmt.Println("clientKey.PublicKey: ", caKey)
-	// Create cert signed by CA
 	certDER, err := x509.CreateCertificate(rand.Reader, clientCertTmpl, caCert, &clientKey.PublicKey, caKey)
 	if err != nil {
 		return nil, nil, err
@@ -139,7 +103,7 @@ func generateClientCert(caCert *x509.Certificate, caKey *rsa.PrivateKey, commonN
 	return certPEM, keyPEM, nil
 }
 
-func ProceedCerts(vpsID string) (map[string]string, error) {
+func ProceedCerts(vpsID string) (map[string]string, []byte, []byte, error) {
 	path := "./certs"
 	caCert, caKey, err := loadCA(path, path)
 	if err != nil {
@@ -149,17 +113,10 @@ func ProceedCerts(vpsID string) (map[string]string, error) {
 
 	clientCN := "Agent_" + vpsID
 
-	// fmt.Println("caCert:", caCert)
-	// fmt.Println("caKey:", caKey)
-
 	clientCertPEM, clientKeyPEM, err := generateClientCert(caCert, caKey, clientCN)
 	if err != nil {
 		panic(err)
 	}
-
-	// Save to disk for demo (in real use, send to client)
-	// os.WriteFile("client.crt", clientCertPEM, 0644)
-	// os.WriteFile("client.key", clientKeyPEM, 0600)
 
 	fmt.Println("Generated client certificate and key for:", clientCN)
 
@@ -168,7 +125,7 @@ func ProceedCerts(vpsID string) (map[string]string, error) {
 		"key":  string(clientKeyPEM),
 	}
 
-	return keys, nil
+	return keys, clientCertPEM, clientKeyPEM, nil
 
 }
 
@@ -191,4 +148,14 @@ func encryptAESGCM(key, plaintext []byte) ([]byte, error) {
 
 	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
 	return ciphertext, nil
+}
+
+func GetCrt() ([]byte, error) {
+
+	caCertPEM, err := os.ReadFile("./certs/ca.crt")
+	if err != nil {
+		return nil, err
+	}
+
+	return caCertPEM, nil
 }

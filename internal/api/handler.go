@@ -45,6 +45,7 @@ func HandleChat(c *gin.Context) {
 
 	switch category {
 	case "vps", "vm_command", "server_metrics", "wordpress":
+		
 		resp, err := agents.HandleVPS(req, agents.VPSFunctionList)
 		if err != nil {
 			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})

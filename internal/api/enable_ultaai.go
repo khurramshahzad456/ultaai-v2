@@ -12,8 +12,8 @@ import (
 )
 
 type EnableUltaAIRequest struct {
-	UserID uint `json:"user_id" binding:"required"`
-	VPSID  uint `json:"vps_id" binding:"required"`
+	UserID string `json:"user_id" binding:"required"`
+	VPSID  string `json:"vps_id" binding:"required"`
 }
 
 // Generate secure random token
@@ -32,17 +32,17 @@ func HandleEnableUltaAI(c *gin.Context) {
 		return
 	}
 
-	// Generate a unique one-time token
 	token, err := generateRandomToken(16)
+	fmt.Println("========================")
+
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
+	fmt.Println("------------------")
 
-	// Store token in memory for 15 minutes
 	utils.SaveInstallToken(token, req.UserID, req.VPSID, 15*time.Minute)
 
-	// Return only the curl command with .sh file
 	curlCmd := fmt.Sprintf(
 		`curl -s https://193.109.193.72/install.sh | bash -s -- --token=%s`,
 		token,

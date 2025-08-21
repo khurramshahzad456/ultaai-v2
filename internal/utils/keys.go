@@ -10,28 +10,30 @@ import (
 )
 
 type AgentKeys struct {
-	IdentityToken   string
-	SignatureSecret string
-	Certificate     string `json:"certificate_pem"`
-	PrivateKey      string
+	IdentityToken     string
+	SignatureSecret   string
+	Certificate       string `json:"certificate_pem"`
+	PrivateKey        string
+	FingerprintSHA256 string
+	
 }
 
 var (
-	agentKeysStore   = make(map[uint]AgentKeys)
+	agentKeysStore   = make(map[string]AgentKeys)
 	agentKeysStoreMu sync.Mutex
 )
 
-func SaveAgentKeys(vpsID uint, keys AgentKeys) {
+func SaveAgentKeys(CommonName string, keys AgentKeys) {
 	agentKeysStoreMu.Lock()
 	defer agentKeysStoreMu.Unlock()
-	agentKeysStore[vpsID] = keys
+	agentKeysStore[CommonName] = keys
 }
 
 // GetAgentKeys retrieves keys for a VPS
-func GetAgentKeys(vpsID uint) (AgentKeys, bool) {
+func GetAgentKeys(CommonName string) (AgentKeys, bool) {
 	agentKeysStoreMu.Lock()
 	defer agentKeysStoreMu.Unlock()
-	keys, exists := agentKeysStore[vpsID]
+	keys, exists := agentKeysStore[CommonName]
 	return keys, exists
 }
 

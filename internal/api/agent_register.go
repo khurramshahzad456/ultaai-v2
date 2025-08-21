@@ -9,9 +9,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net/http"
-	"strconv"
 	"time"
 	"ultahost-ai-gateway/internal/utils"
 
@@ -23,12 +23,6 @@ type AgentRegisterRequest struct {
 	VPSID        string `json:"vps_id" binding:"required"`
 }
 
-type AgentRegisterResponse struct {
-	IdentityToken   string `json:"identity_token"`
-	SignatureSecret string `json:"signature_secret"`
-	Certificate     string `json:"certificate"` // base64 PEM cert
-	PrivateKey      string `json:"private_key"` // base64 PEM key
-}
 
 func generateSecret(length int) string {
 	bytes := make([]byte, length)
@@ -66,7 +60,6 @@ func generateSelfSignedCert() (certPEM []byte, keyPEM []byte, err error) {
 }
 
 func HandleAgentRegister(c *gin.Context) {
-	// Get tokenData from middleware
 	tokenData, exists := c.Get("tokenData")
 	if !exists {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "token data missing"})
@@ -74,25 +67,42 @@ func HandleAgentRegister(c *gin.Context) {
 	}
 	td := tokenData.(utils.TokenData)
 
-	// Now you can use td.UserID, td.VPSID directly
+	fmt.Printf(" td: %+v \n", td)
+	fmt.Printf(" TOKENDDATA: %+v \n", tokenData)
+
 	identityToken := generateSecret(32)
 	signatureSecret := generateSecret(32)
-
-	keys, err := ProceedCerts(strconv.FormatUint(uint64(td.VPSID), 10))
+	keys, clientCertPEM, clientKeyPEM, err := ProceedCerts(td.VPSID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate cert"})
 		return
 	}
 
-	utils.SaveAgentKeys(td.VPSID, utils.AgentKeys{
-		IdentityToken:   identityToken,
-		SignatureSecret: signatureSecret,
-		Certificate:     base64.StdEncoding.EncodeToString([]byte(keys["cert"])),
-		PrivateKey:      base64.StdEncoding.EncodeToString([]byte("key")),
+	cert, err := GetCrt()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load cert"})
+		return
+	}
+	fingerprint, err := utils.ComputeCertFingerprintSHA256(clientCertPEM)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "fingerprint calc failed"})
+		return
+	}
+	fmt.Println("--------- fingerprin: ", fingerprint)
+
+	time.Sleep(50 * time.Millisecond)
+	utils.SaveAgentKeys("Agent_"+td.VPSID, utils.AgentKeys{
+		IdentityToken:     identityToken,
+		SignatureSecret:   signatureSecret,
+		Certificate:       base64.StdEncoding.EncodeToString(clientCertPEM),
+		PrivateKey:        base64.StdEncoding.EncodeToString(clientKeyPEM),
+		FingerprintSHA256: fingerprint,
 	})
 
 	keys["IdentityToken"] = identityToken
 	keys["SignatureSecret"] = signatureSecret
+	keys["FingerprintSHA256"] = fingerprint
+	keys["Cert"] = string(cert)
 
 	payload, err := json.Marshal(keys)
 	if err != nil {
