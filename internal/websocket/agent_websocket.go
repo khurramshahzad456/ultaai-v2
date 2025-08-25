@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"ultahost-ai-gateway/internal/config" // NEW
 	"ultahost-ai-gateway/internal/utils"
 
 	"github.com/gin-gonic/gin"
@@ -75,11 +76,18 @@ func HandleAgentWebSocket(c *gin.Context) {
 	}
 
 	// Build connection
+	sendQ := config.Int("WS_SEND_QUEUE", 64)
+	if sendQ < 1 {
+		sendQ = 1
+	} else if sendQ > 1024 {
+		sendQ = 1024 // hard ceiling
+	}
+
 	agentConn := &AgentConn{
 		Conn:          conn,
 		IdentityToken: keyInfo.IdentityToken,
 		LastSeen:      time.Now(),
-		Send:          make(chan []byte, 128), // lower to save RAM; tune per traffic
+		Send:          make(chan []byte, sendQ), // CHANGED
 		closed:        make(chan struct{}),
 	}
 

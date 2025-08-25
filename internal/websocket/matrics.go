@@ -1,7 +1,9 @@
+// internal/websocket/metrics.go
 package websocket
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 var (
@@ -52,6 +54,7 @@ var (
 )
 
 func init() {
+	// WS metrics
 	prometheus.MustRegister(
 		metricActiveConnections,
 		metricMsgsEnqueued,
@@ -59,9 +62,15 @@ func init() {
 		metricOfflineBuffered,
 		metricOfflineFlushed,
 	)
+
+	// --- New: runtime/process metrics (to prove memory & CPU) ---
+	prometheus.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 }
 
-// Helpers to keep metrics in sync.
+// Helpers unchanged...
 func metricsIncActive()            { metricActiveConnections.Inc() }
 func metricsDecActive()            { metricActiveConnections.Dec() }
 func metricsEnqueued(n int)        { metricMsgsEnqueued.Add(float64(n)) }

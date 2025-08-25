@@ -1,8 +1,10 @@
+// internal/server/routes.go
 package server
 
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/pprof" // NEW
 
 	"ultahost-ai-gateway/internal/api"
 	"ultahost-ai-gateway/internal/websocket"
@@ -40,7 +42,7 @@ func RegisterRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{"status": "queued"})
 	})
 
-	// Simple pool stats
+	// Pool & offline stats
 	r.GET("/agents/pool/stats", func(c *gin.Context) {
 		agents, totalMsgs, totalBytes := websocket.OfflineStats()
 		c.JSON(http.StatusOK, gin.H{
@@ -51,6 +53,27 @@ func RegisterRoutes(r *gin.Engine) {
 		})
 	})
 
+	// --- NEW: health check for quick probes ---
+	r.GET("/healthz", func(c *gin.Context) {
+		agents, totalMsgs, totalBytes := websocket.OfflineStats()
+		c.JSON(http.StatusOK, gin.H{
+			"ok":                 true,
+			"active_connections": websocket.PoolCount(),
+			"offline_agents":     agents,
+			"offline_msgs":       totalMsgs,
+			"offline_bytes":      totalBytes,
+		})
+	})
+
 	// Prometheus metrics
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// --- Optional: pprof (protect in prod) ---
+	pp := gin.New()
+	pp.GET("/debug/pprof/", gin.WrapF(pprof.Index))
+	pp.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
+	pp.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
+	pp.GET("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
+	pp.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
+	r.Any("/debug/pprof/*any", func(c *gin.Context) { pp.HandleContext(c) })
 }

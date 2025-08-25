@@ -1,8 +1,10 @@
+// internal/config/config.go
 package config
 
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -33,4 +35,20 @@ func getEnv(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+// --- New helpers for integer envs (used for memory/queue sizing) ---
+
+func getEnvInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if i, err := strconv.Atoi(v); err == nil {
+			return i
+		}
+	}
+	return def
+}
+
+// Public convenience so other packages can read config ints with defaults.
+func Int(key string, def int) int {
+	return getEnvInt(key, def)
 }
