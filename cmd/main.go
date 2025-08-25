@@ -10,6 +10,7 @@ import (
 
 	"ultahost-ai-gateway/internal/config"
 	"ultahost-ai-gateway/internal/server"
+	"ultahost-ai-gateway/internal/websocket"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +20,7 @@ func main() {
 	if err := server.InitDatabase(); err != nil {
 		log.Fatalf("❌ Failed to initialize database: %v", err)
 	}
+	websocket.RegisterMetrics()
 
 	// Primary HTTP server (your existing server.NewServer())
 	s := server.NewServer()

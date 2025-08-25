@@ -2,8 +2,9 @@
 package websocket
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 var (
@@ -51,26 +52,27 @@ var (
 			Help:      "Total messages flushed from offline buffer to agents",
 		},
 	)
+
+	metricsOnce sync.Once
 )
 
-func init() {
-	// WS metrics
-	prometheus.MustRegister(
-		metricActiveConnections,
-		metricMsgsEnqueued,
-		metricMsgsDropped,
-		metricOfflineBuffered,
-		metricOfflineFlushed,
-	)
+// RegisterMetrics registers all Prometheus metrics for WebSocket
+func RegisterMetrics() {
+	metricsOnce.Do(func() {
+		prometheus.MustRegister(
+			metricActiveConnections,
+			metricMsgsEnqueued,
+			metricMsgsDropped,
+			metricOfflineBuffered,
+			metricOfflineFlushed,
 
-	// --- New: runtime/process metrics (to prove memory & CPU) ---
-	prometheus.MustRegister(
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	)
+			// runtime & process metrics
+
+		)
+	})
 }
 
-// Helpers unchanged...
+// --- Helpers ---
 func metricsIncActive()            { metricActiveConnections.Inc() }
 func metricsDecActive()            { metricActiveConnections.Dec() }
 func metricsEnqueued(n int)        { metricMsgsEnqueued.Add(float64(n)) }
